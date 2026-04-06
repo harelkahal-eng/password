@@ -1,0 +1,49 @@
+print("""
+
+    ██╗  ██╗ █████╗  ██████╗██╗  ██╗        ███╗   ███╗███████╗
+    ██║  ██║██╔══██╗██╔════╝██║ ██╔╝        ████╗ ████║██╔════╝
+    ███████║███████║██║     █████╔╝         ██╔████╔██║█████╗  
+    ██╔══██║██╔══██║██║     ██╔═██╗         ██║╚██╔╝██║██╔══╝  
+    ██║  ██║██║  ██║╚██████╗██║  ██╗███████╗██║ ╚═╝ ██║███████╗
+    ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚══════╝
+                                                            
+
+          """)
+    from flask import Flask, request, render_template_string # type: ignore
+    import hashlib
+
+    app = Flask(__name__)
+
+   
+    passwordhackme = input("enter password: ")
+    usernamehackme = input("enter username: ")
+    stored_password = hashlib.sha256(passwordhackme.encode()).hexdigest()
+
+    html = """
+    <h2>Login</h2>
+    <form method="POST">
+    Username: <input name="username"><br>
+    Password: <input name="password" type="password"><br>
+    <input type="submit">
+    </form>
+    <p>{{ message }}</p>
+    """
+
+    @app.route("/", methods=["GET", "POST"])
+    def login():
+        message = ""
+        if request.method == "POST":
+            username = request.form["username"]
+            password = request.form["password"]
+
+            hashed = hashlib.sha256(password.encode()).hexdigest()
+
+            if username == usernamehackme and hashed == stored_password:
+                message = "Logged in!"
+            else:
+                message = "Wrong credentials"
+
+        return render_template_string(html, message=message)
+
+    if __name__ == "__main__":
+        app.run(host="0.0.0.0", port=5000)
