@@ -1,49 +1,161 @@
-print("""
+import os
+from flask import Flask, request, render_template_string, escape
+from werkzeug.security import generate_password_hash, check_password_hash
 
+# Display ASCII art
+print("""
     ██╗  ██╗ █████╗  ██████╗██╗  ██╗        ███╗   ███╗███████╗
     ██║  ██║██╔══██╗██╔════╝██║ ██╔╝        ████╗ ████║██╔════╝
     ███████║███████║██║     █████╔╝         ██╔████╔██║█████╗  
     ██╔══██║██╔══██║██║     ██╔═██╗         ██║╚██╔╝██║██╔══╝  
     ██║  ██║██║  ██║╚██████╗██║  ██╗███████╗██║ ╚═╝ ██║███████╗
     ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚══════╝
-                                                            
+""")
 
-          """)
-    from flask import Flask, request, render_template_string # type: ignore
-    import hashlib
+app = Flask(__name__)
 
-    app = Flask(__name__)
+# Get credentials from user input or environment variables
+username_hackme = os.getenv("HACKME_USERNAME") or input("Enter username: ")
+password_hackme = os.getenv("HACKME_PASSWORD") or input("Enter password: ")
 
-   
-    passwordhackme = input("enter password: ")
-    usernamehackme = input("enter username: ")
-    stored_password = hashlib.sha256(passwordhackme.encode()).hexdigest()
+# Use bcrypt-style hashing instead of SHA256
+stored_password_hash = generate_password_hash(password_hackme)
 
-    html = """
-    <h2>Login</h2>
-    <form method="POST">
-    Username: <input name="username"><br>
-    Password: <input name="password" type="password"><br>
-    <input type="submit">
-    </form>
-    <p>{{ message }}</p>
-    """
+# HTML template with better styling and structure
+html_template = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hack Me - Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-top: 0;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-top: 15px;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="password"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #764ba2;
+        }
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>🔓 Hack Me</h2>
+        <form method="POST">
+            <label for="username">Username:</label>
+            <input id="username" type="text" name="username" required autofocus>
+            
+            <label for="password">Password:</label>
+            <input id="password" type="password" name="password" required>
+            
+            <button type="submit">Login</button>
+        </form>
+        {% if message %}
+            <div class="message {{ message_class }}">{{ message }}</div>
+        {% endif %}
+    </div>
+</body>
+</html>
+"""
 
-    @app.route("/", methods=["GET", "POST"])
-    def login():
-        message = ""
-        if request.method == "POST":
-            username = request.form["username"]
-            password = request.form["password"]
-
-            hashed = hashlib.sha256(password.encode()).hexdigest()
-
-            if username == usernamehackme and hashed == stored_password:
-                message = "Logged in!"
+@app.route("/", methods=["GET", "POST"])
+def login():
+    message = ""
+    message_class = ""
+    
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        
+        # Validate input
+        if not username or not password:
+            message = "❌ Please enter both username and password"
+            message_class = "error"
+        else:
+            # Use secure password comparison
+            if username == username_hackme and check_password_hash(stored_password_hash, password):
+                message = "✅ Logged in successfully!"
+                message_class = "success"
             else:
-                message = "Wrong credentials"
+                message = "❌ Wrong credentials. Try again!"
+                message_class = "error"
+    
+    return render_template_string(
+        html_template,
+        message=escape(message) if message else "",
+        message_class=message_class
+    )
 
-        return render_template_string(html, message=message)
-
-    if __name__ == "__main__":
-        app.run(host="0.0.0.0", port=5000)
+if __name__ == "__main__":
+    # Bind to localhost in development, use 0.0.0.0 only if needed
+    app.run(host="127.0.0.1", port=5000, debug=False)
